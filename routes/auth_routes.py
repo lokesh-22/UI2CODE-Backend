@@ -4,12 +4,6 @@ import bcrypt
 import jwt
 import datetime
 
-
-
-
-import psycopg2  # Import psycopg2 for Binary conversion
-
-
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/signup', methods=['POST'])
@@ -29,11 +23,7 @@ def signup():
         return jsonify({'message': 'User already exists'}), 400
 
     hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-    
-    # Convert hashed password to binary for storing in PostgreSQL
-    hashed_pw_binary = psycopg2.Binary(hashed_pw)
-
-    new_user = User(name=name, email=email, address=address, phone=phone, password=hashed_pw_binary, gender=gender)
+    new_user = User(name=name, email=email, address=address, phone=phone, password=hashed_pw, gender=gender)
     db.session.add(new_user)
     db.session.commit()
 
@@ -41,24 +31,18 @@ def signup():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    try:
-        data = request.json
-        email = data['email']
-        password = data['password']
+    data = request.json
+    email = data['email']
+    password = data['password']
 
-        user = User.query.filter_by(email=email).first()
-        if user and bcrypt.checkpw(password.encode('utf-8'), user.password):
-            token = jwt.encode({
-                'user_id': user.id,
-                'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=2)
-            }, current_app.config['SECRET_KEY'], algorithm="HS256")
+    user = User.query.filter_by(email=email).first()
+    if user and bcrypt.checkpw(password.encode('utf-8'), user.password):
+        token = jwt.encode({
+            'user_id': user.id,
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+        }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
-            if isinstance(token, bytes):
-                token = token.decode('utf-8')
+        return jsonify({'token': token.decode('utf-8')}), 200
 
-            return jsonify({'token': token}), 200
 
-        return jsonify({'message': 'Invalid credentials'}), 401
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    return jsonify({'message': 'Invalid credentials'}), 401
