@@ -60,7 +60,9 @@ def get_reviews_by_car(car_id):
     return jsonify([
         {
             'user': review.user.name,
+            'gender': review.user.gender,
             'rating': review.rating,
-            'comment': review.comment
+            'comment': review.comment,
+            
         } for review in reviews
     ])
