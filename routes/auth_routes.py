@@ -31,18 +31,24 @@ def signup():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    data = request.json
-    email = data['email']
-    password = data['password']
+    try:
+        data = request.json
+        email = data['email']
+        password = data['password']
 
-    user = User.query.filter_by(email=email).first()
-    if user and bcrypt.checkpw(password.encode('utf-8'), user.password):
-        token = jwt.encode({
-            'user_id': user.id,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=2)
-        }, current_app.config['SECRET_KEY'], algorithm="HS256")
+        user = User.query.filter_by(email=email).first()
+        if user and bcrypt.checkpw(password.encode('utf-8'), user.password):
+            token = jwt.encode({
+                'user_id': user.id,
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+            }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
-        return jsonify({'token': token}), 200 
+            if isinstance(token, bytes):
+                token = token.decode('utf-8')
 
+            return jsonify({'token': token}), 200
 
-    return jsonify({'message': 'Invalid credentials'}), 401
+        return jsonify({'message': 'Invalid credentials'}), 401
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
