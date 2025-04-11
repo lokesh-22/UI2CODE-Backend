@@ -4,6 +4,12 @@ import bcrypt
 import jwt
 import datetime
 
+
+
+
+import psycopg2  # Import psycopg2 for Binary conversion
+
+
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/signup', methods=['POST'])
@@ -23,7 +29,11 @@ def signup():
         return jsonify({'message': 'User already exists'}), 400
 
     hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-    new_user = User(name=name, email=email, address=address, phone=phone, password=hashed_pw, gender=gender)
+    
+    # Convert hashed password to binary for storing in PostgreSQL
+    hashed_pw_binary = psycopg2.Binary(hashed_pw)
+
+    new_user = User(name=name, email=email, address=address, phone=phone, password=hashed_pw_binary, gender=gender)
     db.session.add(new_user)
     db.session.commit()
 
