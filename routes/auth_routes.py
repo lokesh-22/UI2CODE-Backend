@@ -42,7 +42,10 @@ def login():
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=2)
         }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
-        return jsonify({'token': token.decode('utf-8')}), 200
+        if isinstance(token, bytes):
+            token = token.decode('utf-8')
+
+        return jsonify({'token': token}), 200
 
 
     return jsonify({'message': 'Invalid credentials'}), 401
