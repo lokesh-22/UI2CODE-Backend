@@ -3,6 +3,8 @@ from models import db, User
 import bcrypt
 import jwt
 import datetime
+import logging
+
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -29,23 +31,47 @@ def signup():
 
     return jsonify({'message': 'User created successfully'}), 201
 
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+
 @auth_bp.route('/login', methods=['POST'])
 def login():
+    # Debugging: Check incoming data
     data = request.json
-    email = data['email']
-    password = data['password']
+    logging.debug(f"Received login data: {data}")
 
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        logging.debug("Missing email or password")
+        return jsonify({'message': 'Email and password are required'}), 400
+
+    # Debugging: Checking the user query
     user = User.query.filter_by(email=email).first()
+    if user:
+        logging.debug(f"User found: {user.email}")
+    else:
+        logging.debug(f"No user found with email: {email}")
+    
     if user and bcrypt.checkpw(password.encode('utf-8'), user.password):
+        logging.debug(f"Password match successful for user: {user.email}")
+
         token = jwt.encode({
             'user_id': user.id,
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=2)
         }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
+        # Debugging: Log token generation
+        logging.debug(f"Generated token: {token}")
+
         if isinstance(token, bytes):
             token = token.decode('utf-8')
+            logging.debug(f"Decoded token: {token}")
 
         return jsonify({'token': token}), 200
 
-
+    # Debugging: Invalid credentials
+    logging.debug("Invalid credentials provided.")
     return jsonify({'message': 'Invalid credentials'}), 401
