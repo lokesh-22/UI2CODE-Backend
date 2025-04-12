@@ -34,44 +34,27 @@ def signup():
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
-
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    # Debugging: Check incoming data
     data = request.json
-    logging.debug(f"Received login data: {data}")
+    email = data['email']
+    password = data['password']
 
-    email = data.get('email')
-    password = data.get('password')
-
-    if not email or not password:
-        logging.debug("Missing email or password")
-        return jsonify({'message': 'Email and password are required'}), 400
-
-    # Debugging: Checking the user query
     user = User.query.filter_by(email=email).first()
     if user:
         logging.debug(f"User found: {user.email}")
-    else:
-        logging.debug(f"No user found with email: {email}")
-    
-    if user and bcrypt.checkpw(password.encode('utf-8'), user.password):
-        logging.debug(f"Password match successful for user: {user.email}")
+        # Ensure both password and hash are bytes
+        hashed_password = user.password.encode('utf-8') if isinstance(user.password, str) else user.password
+        if bcrypt.checkpw(password.encode('utf-8'), hashed_password):
+            token = jwt.encode({
+                'user_id': user.id,
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+            }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
-        token = jwt.encode({
-            'user_id': user.id,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=2)
-        }, current_app.config['SECRET_KEY'], algorithm="HS256")
+            if isinstance(token, bytes):
+                token = token.decode('utf-8')
 
-        # Debugging: Log token generation
-        logging.debug(f"Generated token: {token}")
+            return jsonify({'token': token}), 200
 
-        if isinstance(token, bytes):
-            token = token.decode('utf-8')
-            logging.debug(f"Decoded token: {token}")
-
-        return jsonify({'token': token}), 200
-
-    # Debugging: Invalid credentials
-    logging.debug("Invalid credentials provided.")
+    logging.warning("Invalid login attempt")
     return jsonify({'message': 'Invalid credentials'}), 401
