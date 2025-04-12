@@ -24,7 +24,7 @@ def signup():
     if User.query.filter_by(email=email).first():
         return jsonify({'message': 'User already exists'}), 400
 
-    hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     new_user = User(name=name, email=email, address=address, phone=phone, password=hashed_pw, gender=gender)
     db.session.add(new_user)
     db.session.commit()
